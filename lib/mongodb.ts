@@ -1,6 +1,7 @@
 import { MongoClient } from "mongodb";
 
 const client = new MongoClient(process.env.MONGODB_URI!);
+
 const DB_NAME = "rag-db";
 const COLLECTION_NAME = "documents";
 const VECTOR_INDEX_NAME = "embedding_vector_idx";
@@ -14,9 +15,13 @@ export async function connectDB() {
     db = client.db(DB_NAME);
   }
 
-  // Check if collection exists
-  const collections = await db.listCollections({ name: COLLECTION_NAME }).toArray();
+  // 📁 Check collection
+  const collections = await db
+    .listCollections({ name: COLLECTION_NAME })
+    .toArray();
+
   let collection;
+
   if (collections.length === 0) {
     collection = await db.createCollection(COLLECTION_NAME);
     console.log(`Collection '${COLLECTION_NAME}' created automatically!`);
@@ -24,9 +29,10 @@ export async function connectDB() {
     collection = db.collection(COLLECTION_NAME);
   }
 
-  // ✅ Auto-create vector index if it doesn't exist (MongoDB Atlas Vector Search)
+  // 🔍 Vector index check
   try {
     const indexes = await db.command({ listIndexes: COLLECTION_NAME });
+
     const hasVectorIndex = indexes.cursor.firstBatch.some(
       (idx: any) => idx.name === VECTOR_INDEX_NAME
     );
@@ -37,15 +43,20 @@ export async function connectDB() {
         indexes: [
           {
             name: VECTOR_INDEX_NAME,
-            key: { embedding: "2dsphere" }, // Atlas Vector Search replacement
-            // Note: real Atlas Vector Search index must be created from Atlas UI or Terraform
+            key: { embedding: "2dsphere" }, // ⚠️ placeholder
           },
         ],
       });
+
       console.log(`Vector index '${VECTOR_INDEX_NAME}' created!`);
     }
   } catch (err) {
-    console.warn("Vector index creation skipped:", err.message);
+    // ✅ SAFE ERROR HANDLING
+    if (err instanceof Error) {
+      console.warn("Vector index creation skipped:", err.message);
+    } else {
+      console.warn("Vector index creation skipped:", err);
+    }
   }
 
   return collection;

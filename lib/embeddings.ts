@@ -1,5 +1,3 @@
-import fetch from "node-fetch";
-
 export class CustomEmbeddings {
   apiKey: string;
 
@@ -19,8 +17,11 @@ export class CustomEmbeddings {
         input: texts,
       }),
     });
+
     const data = await res.json();
+
     if (!data.data) throw new Error("Embedding error");
+
     return data.data.map((e: any) => e.embedding);
   }
 
@@ -36,8 +37,11 @@ export class CustomEmbeddings {
         input: text,
       }),
     });
+
     const data = await res.json();
+
     if (!data.data) throw new Error("Embedding error");
+
     return data.data[0].embedding;
   }
 }

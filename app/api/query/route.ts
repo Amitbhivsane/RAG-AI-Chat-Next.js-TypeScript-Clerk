@@ -87,6 +87,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { CustomEmbeddings } from "@/lib/embeddings";
 
+// ✅ Define type once
+type SearchResult = {
+  text: string;
+  score: number;
+};
+
 export async function POST(req: NextRequest) {
   try {
     const { question } = await req.json();
@@ -99,12 +105,13 @@ export async function POST(req: NextRequest) {
     const embeddingsClient = new CustomEmbeddings(
       process.env.OPENROUTER_API_KEY!
     );
+
     const queryVector = await embeddingsClient.embedQuery(question);
 
     const collection = await connectDB();
 
     // 2️⃣ Vector search
-    const results = await collection
+    const results: SearchResult[] = await collection
       .aggregate([
         {
           $search: {
@@ -129,18 +136,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ answer: "No relevant results found." });
     }
 
-    // ✅ 3️⃣ Filter low-quality chunks
+    // 3️⃣ Filter low-quality chunks
     const filtered = results.filter((r) => r.score > 0.7);
 
-    // fallback if all filtered out
-    const topResults = filtered.length ? filtered.slice(0, 3) : results.slice(0, 3);
+    // fallback
+    const topResults = filtered.length
+      ? filtered.slice(0, 3)
+      : results.slice(0, 3);
 
-    // ✅ 4️⃣ Clean + limit context
+    // 4️⃣ Combine context
     const combinedText = topResults
-      .map((r, i) => `Chunk ${i + 1}:\n${r.text.slice(0, 300)}`)
+      .map(
+        (r, i: number) =>
+          `Chunk ${i + 1}:\n${r.text.slice(0, 300)}`
+      )
       .join("\n\n");
 
-    // ✅ 5️⃣ Strong prompt
+    // 5️⃣ Prompt
     const prompt = `
 You are a helpful AI assistant.
 
@@ -158,7 +170,7 @@ Question: ${question}
 Answer:
 `;
 
-    // ✅ 6️⃣ Call LLM (fixed format)
+    // 6️⃣ LLM call
     const llmRes = await fetch("https://openrouter.ai/api/v1/completions", {
       method: "POST",
       headers: {
@@ -167,7 +179,7 @@ Answer:
       },
       body: JSON.stringify({
         model: "nvidia/nemotron-3-super-120b-a12b:free",
-        prompt: prompt,   // ✅ FIXED (was "input")
+        prompt,
         max_tokens: 200,
         temperature: 0.3,
       }),
@@ -175,15 +187,17 @@ Answer:
 
     const llmData = await llmRes.json();
 
-    // ✅ 7️⃣ Correct parsing
+    // 7️⃣ Parse response
     const answer =
       llmData?.choices?.[0]?.text ||
       llmData?.choices?.[0]?.message?.content ||
       "No answer generated";
 
     return NextResponse.json({ answer });
+
   } catch (err) {
     console.error("Query Error:", err);
+
     return NextResponse.json(
       { error: (err as Error).message },
       { status: 500 }
