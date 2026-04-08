@@ -1,37 +1,10 @@
-// "use client";
-// import { useState } from "react";
-
-// export default function Upload() {
-//   const [file, setFile] = useState<File | null>(null);
-
-//   const upload = async () => {
-//     if (!file) return alert("Select a PDF first!");
-
-//     const formData = new FormData();
-//     formData.append("file", file);
-
-//     const res = await fetch("/api/index", { method: "POST", body: file });
-//     const data = await res.json();
-
-//     alert(`Indexed ${data.count} chunks!`);
-//   };
-
-//   return (
-//     <div className="p-4">
-//       <input type="file" accept="application/pdf" onChange={(e) => setFile(e.target.files?.[0] || null)} />
-//       <button onClick={upload} className="bg-green-500 text-white p-2 ml-2">
-//         Upload
-//       </button>
-//     </div>
-//   );
-// }
-
 "use client";
 import { useState } from "react";
 
 export default function Upload() {
   const [file, setFile] = useState<File | null>(null);
   const [status, setStatus] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(false);
 
   const upload = async () => {
     if (!file) {
@@ -41,41 +14,65 @@ export default function Upload() {
 
     try {
       setStatus("⏳ Uploading & indexing...");
+      setLoading(true);
 
       const formData = new FormData();
       formData.append("file", file);
 
       const res = await fetch("/api/index", {
         method: "POST",
-        body: formData, // ✅ FIXED (you were sending file directly)
+        body: formData,
       });
 
-      const data = await res.json();
+      let data;
+      try {
+        data = await res.json();
+      } catch {
+        setStatus("❌ Server returned invalid response");
+        setLoading(false);
+        return;
+      }
 
-      setStatus(`✅ Indexed ${data.count} chunks successfully!`);
+      if (!res.ok) {
+        setStatus(`❌ ${data.error || "Upload failed"}`);
+        setLoading(false);
+        return;
+      }
+
+      setStatus(`✅ Indexed ${data.count ?? 0} chunks successfully!`);
+      setFile(null);
+
     } catch (error) {
+      console.error("Upload error:", error);
       setStatus("❌ Upload failed");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="p-4 border rounded">
+    <div className="p-4 border rounded max-w-md">
       <input
         type="file"
         accept="application/pdf"
         onChange={(e) => setFile(e.target.files?.[0] || null)}
+        className="mb-2"
       />
+
+      {file && <p className="text-sm mb-2">Selected file: {file.name}</p>}
 
       <button
         onClick={upload}
-        className="bg-green-500 text-white p-2 ml-2 rounded"
+        disabled={!file || loading}
+        className="bg-green-500 text-white p-2 rounded disabled:opacity-50"
       >
-        Upload
+        {loading ? "Uploading..." : "Upload"}
       </button>
 
-      {/* ✅ STATUS MESSAGE */}
       {status && (
-        <p className="mt-2 text-sm text-white">{status}</p>
+        <p className={`mt-2 text-sm ${status.startsWith("❌") ? "text-red-400" : "text-green-400"}`}>
+          {status}
+        </p>
       )}
     </div>
   );
