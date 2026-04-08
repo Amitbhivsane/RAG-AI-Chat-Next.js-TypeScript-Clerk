@@ -95,11 +95,13 @@ export async function POST(req: NextRequest) {
     const file = formData.get("file") as File;
     if (!file) return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
 
+    // Buffer-based PDF parsing (no fs)
     const buffer = Buffer.from(await file.arrayBuffer());
     const pdfData = await pdf(buffer);
 
-    if (!pdfData.text || pdfData.text.trim() === "")
+    if (!pdfData.text?.trim()) {
       return NextResponse.json({ error: "PDF has no text" }, { status: 400 });
+    }
 
     const docs = [{ pageContent: pdfData.text, metadata: { fileName: file.name } }];
     const splitDocs = await splitter.splitDocuments(docs);
@@ -116,6 +118,7 @@ export async function POST(req: NextRequest) {
       metadata: doc.metadata || {},
       createdAt: new Date(),
     }));
+
     await collection.insertMany(data);
 
     return NextResponse.json({ success: true, count: data.length });
