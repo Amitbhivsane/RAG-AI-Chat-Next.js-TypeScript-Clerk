@@ -84,7 +84,7 @@
 
 // vercel
 import { NextRequest, NextResponse } from "next/server";
-import pdf from "pdf-parse"; // direct buffer-based PDF parsing
+import pdf from "pdf-parse";
 import { connectDB } from "@/lib/mongodb";
 import { CustomEmbeddings } from "@/lib/embeddings";
 import { splitter } from "@/lib/splitter";
@@ -93,48 +93,32 @@ export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
     const file = formData.get("file") as File;
+    if (!file) return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
 
-    if (!file) {
-      return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
-    }
-
-    // Buffer मध्ये convert करा
     const buffer = Buffer.from(await file.arrayBuffer());
-
-    // PDF text extract करा
     const pdfData = await pdf(buffer);
 
-    if (!pdfData.text || pdfData.text.trim() === "") {
+    if (!pdfData.text || pdfData.text.trim() === "")
       return NextResponse.json({ error: "PDF has no text" }, { status: 400 });
-    }
 
-    // Split text into chunks
     const docs = [{ pageContent: pdfData.text, metadata: { fileName: file.name } }];
     const splitDocs = await splitter.splitDocuments(docs);
 
-    if (!splitDocs.length) {
-      return NextResponse.json({ error: "No chunks created" }, { status: 400 });
-    }
-
-    // Embeddings generate करा
     const texts = splitDocs.map(d => d.pageContent);
     const embeddingsClient = new CustomEmbeddings(process.env.OPENROUTER_API_KEY!);
     const vectors = await embeddingsClient.embedDocuments(texts);
 
-    // MongoDB मध्ये save करा
     const collection = await connectDB();
-    await collection.deleteMany({}); // optional
+    await collection.deleteMany({});
     const data = splitDocs.map((doc, i) => ({
       text: doc.pageContent,
       embedding: vectors[i],
       metadata: doc.metadata || {},
       createdAt: new Date(),
     }));
-
     await collection.insertMany(data);
 
     return NextResponse.json({ success: true, count: data.length });
-
   } catch (err) {
     console.error("PDF Indexing Error:", err);
     return NextResponse.json({ error: (err as Error).message }, { status: 500 });
