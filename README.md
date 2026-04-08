@@ -1,36 +1,71 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+RAG AI Chat – Next.js + TypeScript + Clerk
 
-## Getting Started
+An AI-powered Retrieval-Augmented Generation (RAG) application built with Next.js, TypeScript, and Clerk that allows users to upload documents and chat with them using modern AI.
 
-First, run the development server:
+✨ Features
+    🔐 Authentication with Clerk
+    
+    Secure login/signup
+    
+    User session management
+    
+    Chat access only after login
+    
+📄 Document-based Q&A (RAG)
+    
+    Upload PDFs or text files
+    
+    Extract and chunk content
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+    Generate embeddings
+    
+    Retrieve relevant context for accurate answers
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+🤖 AI Chat Interface
+    
+    Ask questions in natural language
+    
+    Context-aware responses
+    
+    Clean and responsive UI
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+🧠 Vector Search
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+    Efficient similarity search using embeddings
+    Configurable top_k retrieval
 
-## Learn More
+🗂 MongoDB Integration
+ 
+  Store documents and embeddings
+  
+  Scalable backend with MongoDB Atlas
 
-To learn more about Next.js, take a look at the following resources:
+🏗 Tech Stack
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+    Frontend: Next.js (App Router) + Tailwind CSS
+    
+    Backend: Next.js API Routes
+    
+    Language: TypeScript
+  
+    Auth: Clerk
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+    Database: MongoDB Atlas
 
-## Deploy on Vercel
+    AI / RAG: Embeddings + Vector Search
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+⚙️ How It Works
+  Upload Document
+        File is processed and split into chunks (chunkSize, chunkOverlap)
+    Embedding Generation
+        Each chunk is converted into vector embeddings
+  Storage
+    Stored in MongoDB with vector index
+  User Query
+      Query is embedded and matched against stored vectors
+    
+  Retrieval (top_k)
+    Most relevant chunks are selected
+ AI Response
+Context + query → LLM → final answer
+ 
